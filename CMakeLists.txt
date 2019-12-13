@@ -1,8 +1,19 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(ethzasl_apriltag2)
 
-find_package(catkin_simple REQUIRED)
-catkin_simple(ALL_DEPS_REQUIRED)
+set(CMAKE_CXX_STANDARD 11)
+
+#################
+#     EIGEN     #
+#################
+find_package(Eigen3 REQUIRED)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
+
+#################
+#    OPENCV     #
+#################
+find_package(OpenCV REQUIRED)
+
 
 add_definitions("-fPIC -O3")
 find_package(Threads)
@@ -14,28 +25,50 @@ if ("!${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   add_definitions( -Werror )
 endif()
 
+#################
+#   INCLUDE     #
+#################
+include_directories(include ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
+
+#################
+# output path   #
+#################
+set(EXECUTABLE_OUTPUT_PATH bin)
+set(LIBRARY_OUTPUT_PATH lib)
+
 #############
 # LIBRARIES #
 #############
 file(GLOB SOURCE_FILES "src/*.cc")
+add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
+# set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER include/*.h)
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)
+target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} ${OpenCV_LIBS})
 
-cs_add_library(${PROJECT_NAME}
-  ${SOURCE_FILES}
+##############
+# LIB INSTALL#
+##############
+install(
+   DIRECTORY include/apriltags/
+   DESTINATION include
 )
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-
+install(
+   TARGETS ${PROJECT_NAME}
+   ARCHIVE DESTINATION lib
+   LIBRARY DESTINATION lib
+   COMPONENT library
+)
 ############
 # EXAMPLES #
 ############
 if(NOT APPLE)
-  cs_add_executable(apriltags_demo 
-    src/example/apriltags_demo.cpp src/example/Serial.cpp
+  add_executable(apriltags_demo 
+    example/apriltags_demo.cpp example/Serial.cpp
   )
   target_link_libraries(apriltags_demo ${PROJECT_NAME} v4l2)
 endif()
 
-##########
-# EXPORT #
-##########
-cs_install()
-cs_export()
+  add_executable(image_demo 
+                  example/apriltags_image_demo.cpp
+)
+target_link_libraries(image_demo ${PROJECT_NAME})
